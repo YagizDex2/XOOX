@@ -1,0 +1,806 @@
+body {
+    background-color: #FFE135;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Sadece ana menü açıkken body'nin arka planını mavi yap */
+body.menu-open {
+    background-color: #1a237e !important;
+}
+
+.container {
+    text-align: center;
+    font-family: Arial, sans-serif;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(3, 150px);
+    grid-gap: 10px;
+    margin: 30px auto;
+    width: 470px;
+}
+
+.cell {
+    width: 150px;
+    height: 150px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    -webkit-clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    margin: 5px;
+    background-color: transparent !important;
+    background-image: url('./bal_petek2.png');
+    background-size: cover;
+    background-position: center;
+}
+
+.cell::before,
+.cell::after {
+    display: none;
+}
+
+.cell > span::before,
+.cell > span::after {
+    display: none;
+}
+
+.cell:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+#status {
+    margin: 20px 0;
+    font-size: 20px;
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+h1 {
+    color: #333;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+.music-controls {
+    position: fixed;
+    right: -150px;
+    top: calc(50% - 140px);
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 10px 0 0 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 100;
+    transition: right 0.3s ease;
+}
+
+.music-controls:hover,
+.music-controls.active {
+    right: 0;
+}
+
+.music-controls::before {
+    content: '🎵';
+    position: absolute;
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 5px;
+    border-radius: 5px 0 0 5px;
+    cursor: pointer;
+}
+
+#volumeSlider {
+    width: 5px;
+    height: 150px;
+    -webkit-appearance: none;
+    background: #ddd;
+    border-radius: 5px;
+    outline: none;
+    transform: rotate(180deg);
+}
+
+#volumeSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+}
+
+#volumeSlider::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    border: none;
+}
+
+@keyframes moveLeft {
+    0% { transform: translateX(100px); }
+    50% { transform: translateX(-100px); }
+    100% { transform: translateX(100px); }
+}
+
+.moving-title {
+    animation: moveLeft 3s infinite ease-in-out;
+    color: #FFB100;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.winner-display {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.winner-display.active {
+    display: flex;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.winner-content {
+    background-color: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    animation: scaleIn 0.5s ease-out;
+}
+
+.winner-emoji {
+    font-size: 100px;
+    display: block;
+    margin-bottom: 20px;
+    animation: bounce 1s infinite;
+}
+
+.winner-text {
+    font-size: 30px;
+    color: #333;
+    margin: 0;
+}
+
+.score-board {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.score-item {
+    margin: 10px 0;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.score-emoji {
+    font-size: 30px;
+}
+
+#resetScores {
+    margin-top: 10px;
+    width: 100%;
+    padding: 5px;
+    font-size: 14px;
+}
+
+.moves-left {
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 10px 0;
+    font-size: 18px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.volume-icon {
+    cursor: pointer;
+    font-size: 20px;
+    user-select: none;
+}
+
+.volume-icon.muted {
+    position: relative;
+}
+
+.volume-icon.muted::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background-color: red;
+    transform: rotate(-45deg);
+    left: 0;
+    top: 50%;
+}
+
+.power-ups {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.power-cell {
+    width: 50px;
+    height: 50px;
+    background: url('mystery_box.png');
+    background-size: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 24px;
+    transition: all 0.3s ease;
+}
+
+.power-cell:hover {
+    transform: scale(1.1);
+    filter: brightness(1.2);
+}
+
+.active-powers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.power-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.power-item:hover {
+    background: #f0f0f0;
+}
+
+.power-item.active {
+    background: #90EE90;
+}
+
+.power-active {
+    position: relative;
+    background: radial-gradient(circle, rgba(255,215,0,0.5) 0%, rgba(255,215,0,0.2) 70%) !important;
+}
+
+.power-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    color: #FFB100;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    animation: pulse 1.5s infinite;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.power-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    z-index: 1000;
+    animation: slideDown 0.5s ease-out;
+}
+
+.power-info {
+    text-align: center;
+}
+
+.power-info h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.power-info p {
+    margin: 0 0 10px 0;
+    color: #666;
+}
+
+.power-type {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+@keyframes slideDown {
+    from { transform: translate(-50%, -100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.fade-out {
+    animation: fadeOut 0.5s forwards;
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; }
+}
+
+.power-owner {
+    font-size: 24px;
+}
+
+.power-duration {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+.power-name {
+    flex-grow: 1;
+}
+
+.game-mode-select {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    margin-top: 60px;
+}
+
+.mode-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.mode-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    border: none;
+    border-radius: 10px;
+    background: #FFE4B5;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mode-button:hover {
+    transform: scale(1.05);
+    background: #FFD700;
+}
+
+.mode-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.mode-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+
+.mode-switcher {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.mode-switch-btn {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 30px;
+    background: #C0C0C0;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    opacity: 1 !important;
+    visibility: visible !important;
+    margin-right: 20px;
+}
+
+.mode-switch-btn:hover {
+    transform: scale(1.05);
+    background: #D3D3D3;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.mode-icons {
+    font-size: 20px;
+    margin-top: 5px;
+    color: #333;
+}
+
+/* Klasik mod için hücre stilleri */
+.cell.classic-mode {
+    background-image: none !important;
+    background-color: #4CAF50 !important;
+    clip-path: none !important;
+    border-radius: 10px;
+    border: 2px solid #333;
+    color: #333;
+}
+
+/* Klasik mod için container arka planı */
+.container.classic-mode {
+    background-color: white;
+}
+
+.game-mode-select h1 {
+    color: #333;
+    font-size: 36px;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.development-banner {
+    background-color: #FFB100;
+    color: white;
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Moving-title sınıfını sadece arılı modda göster */
+.moving-title {
+    display: none;
+}
+
+.bee-mode .moving-title {
+    display: inline-block;
+}
+
+/* Klasik mod için body arka planı */
+body.classic-mode {
+    background-color: #333 !important;
+}
+
+/* Klasik mod için buton stili */
+.mode-switch-btn.classic {
+    background: #4CAF50;
+    color: white;
+}
+
+/* Arılı mod için buton stili */
+.mode-switch-btn.bee {
+    background: #FFE4B5;
+    color: #333;
+}
+
+/* Sadece oyun modu seçme ekranı açıkken arka planı mavi yap */
+body.mode-select {
+    background-color: #1a237e !important;
+}
+
+.main-menu {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.menu-button {
+    padding: 20px 40px;
+    font-size: 28px;
+    font-weight: bold;
+    background: #C0C0C0;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.menu-button:hover {
+    transform: scale(1.05);
+    background: #D3D3D3;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.options-menu {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 20px;
+}
+
+.options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.option-cell {
+    width: 300px;
+    height: 50px;
+    background: #FFF8DC;
+    border-radius: 10px;
+    border: 2px solid #FFB100;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    font-size: 18px;
+}
+
+/* İlk seçenek için müzik stili */
+.option-cell:first-child {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.option-cell:first-child::before {
+    content: 'Müzik';
+    font-weight: bold;
+}
+
+.top-menu {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    width: calc(100% - 40px);
+    position: fixed;
+    top: 40px;
+    left: 0;
+    z-index: 1000;
+}
+
+.back-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #FFB100;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.back-button:hover {
+    background: #FF9800;
+}
+
+#currentMode {
+    margin-bottom: 5px;
+    color: #333;
+}
+
+/* Seçenekler menüsündeki müzik kontrolü */
+.option-cell.music-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+}
+
+.option-cell.music-option::before {
+    content: '🎵 Müzik';
+    font-weight: bold;
+}
+
+.music-icon {
+    position: fixed;
+    right: 20px;
+    top: calc(50% - 264px);
+    cursor: pointer;
+    z-index: 1000;
+    font-size: 24px;
+    transition: transform 0.3s ease;
+    background: white;
+    padding: 8px;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.slider {
+    position: fixed;
+    right: -150px;
+    top: calc(50% - 264px);
+    background: white;
+    padding: 15px;
+    border-radius: 10px 0 0 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 999;
+    transition: right 0.3s ease;
+}
+
+.slider.open {
+    right: 0;
+}
+
+.slider::before {
+    content: '🎵';
+    position: absolute;
+    left: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: white;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+}
+
+#volumeSlider {
+    width: 5px;
+    height: 150px;
+    -webkit-appearance: none;
+    background: #ddd;
+    border-radius: 5px;
+    outline: none;
+    transform: rotate(180deg);
+    writing-mode: bt-lr;
+    -webkit-appearance: slider-vertical;
+}
+
+#volumeSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+}
+
+#volumeSlider::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    border: none;
+}
+
+.music-icon.hidden {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+#muteButton {
+    position: relative;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 28px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+}
+
+.volume-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Hoparlör butonu için çarpı işareti */
+#muteButton.muted::after {
+    content: '';
+    position: absolute;
+    width: 60%;
+    height: 2px;
+    background-color: red;
+    transform: rotate(-45deg);
+    left: 20%;
+    top: 52%;
+}
