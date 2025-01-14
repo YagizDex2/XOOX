@@ -202,9 +202,13 @@ function rebuildBoard(newSize) {
     const board = document.getElementById('board');
     board.innerHTML = '';
     
+    // Tahta boyutuna göre hücre boyutunu ayarla
+    const maxBoardWidth = 800; // Maksimum tahta genişliği (piksel)
+    const cellSize = Math.min(150, Math.floor((maxBoardWidth - (newSize-1) * 10) / newSize));
+    
     // Grid yapısını güncelle
-    board.style.gridTemplateColumns = `repeat(${newSize}, 150px)`;
-    board.style.width = `${newSize * 150 + (newSize-1) * 10}px`; // Her hücre 150px ve aralarında 10px boşluk
+    board.style.gridTemplateColumns = `repeat(${newSize}, ${cellSize}px)`;
+    board.style.width = `${newSize * cellSize + (newSize-1) * 10}px`;
     
     // Yeni gameBoard array'ini oluştur
     const totalCells = newSize * newSize;
@@ -213,63 +217,40 @@ function rebuildBoard(newSize) {
     // Yeni hücreleri oluştur
     for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement('div');
-        cell.className = 'cell';
+        cell.classList.add('cell');
         cell.setAttribute('data-index', i);
+        
+        // Hücre boyutunu ayarla
+        cell.style.width = `${cellSize}px`;
+        cell.style.height = `${cellSize}px`;
+        cell.style.fontSize = `${cellSize * 0.5}px`; // Emoji boyutunu hücre boyutuna göre ayarla
+        
         cell.style.backgroundImage = 'url(\'./bal_petek2.png\')';
         board.appendChild(cell);
+        
+        // Click event listener'ı ekle
+        cell.addEventListener('click', handleBeeMove);
     }
-    
-    // Event listener'ları yeniden ekle
-    document.querySelectorAll('.cell').forEach(cell => {
-        cell.addEventListener('click', handleCellClick);
-    });
+
+    // Kazanma koşullarını güncelle
+    updateWinConditions(newSize);
 }
 
 // Güç türlerini güncelleyelim
 const POWERS = {
     EXPAND_BOARD: {
-        type: 'buff',
-        name: 'Tahta Genişletme',
-        description: '3 yeni blok ekle',
-        duration: null,
-        condition: () => !isExpandedBoard  // Tahta genişletilmemişse çıkabilir
-    },
-    BLOCK_OPPONENT: {
-        type: 'buff',
-        name: 'Blok Engeli',
-        description: 'Rakibin bir bloğa hamle yapmasını engelle',
-        duration: 3,
-        condition: () => true  // Her zaman çıkabilir
-    },
-    INCREASE_WIN_CONDITION: {
-        type: 'debuff',
-        name: '4\'lü Kazanma',
-        description: 'Rakip 4 taş ile kazanabilir',
-        duration: 5,
-        condition: () => isExpandedBoard || extraPieceAdded,  // Tahta genişletilmiş veya ekstra taş eklenmişse çıkabilir
-        targetOpponent: true  // Bu güç rakibe atılacak
-    },
-    DOUBLE_MOVE: {
-        type: 'buff',
-        name: 'Çift Hamle',
-        description: 'Aynı anda 2 taş koy',
-        duration: 2,
-        condition: () => true
-    },
-    DECREASE_WIN_CONDITION: {
-        type: 'buff',
-        name: '3\'lü Kazanma',
-        description: 'Kazanma şartını 3\'e düşür',
-        duration: 4,
-        condition: () => winCondition > 3  // Sadece kazanma şartı 3'ten büyükse çıkabilir
-    },
-    BLOCK_ADJACENT: {
-        type: 'debuff',
-        name: 'Yakın Blok Engeli',
-        description: 'Bir taşının yanına hamle yapamazsın',
-        duration: 2,
-        condition: () => true
+        icon: '📐',
+        name: 'Tahta Genişlet',
+        description: 'Tahtayı bir birim genişletir',
+        effect: (player) => {
+            if (boardSize < 8) { // Maksimum 8x8
+                boardSize++;
+                rebuildBoard(boardSize);
+                showPowerNotification(`${player} tahtayı ${boardSize}x${boardSize} yaptı!`);
+            }
+        }
     }
+    // Diğer güçler buraya eklenebilir...
 };
 
 // Aktif güçleri takip etmek için yapıyı güncelleyelim
@@ -381,7 +362,7 @@ function handleClassicWin() {
     });
 }
 
-// Arılı mod için ayrı kazanma fonksiyonu
+// Arılı mod için kazanma fonksiyonunu güncelleyelim
 function handleBeeWin() {
     gameActive = false;
     // Tüm hücreleri tıklanamaz yap
@@ -411,12 +392,22 @@ function handleBeeWin() {
     winnerDisplay.classList.add('active');
     backgroundMusic.pause();
     
-    // Oyun tahtasını temizle
+    // Oyun değişkenlerini sıfırla
     gameBoard = ['', '', '', '', '', '', '', '', ''];
+    beeCount = 0;
+    honeyCount = 0;
+    moveCounter = 0;
+    selectedCell = null;
+    
+    // Tahtayı temizle
     cells.forEach(cell => {
         cell.textContent = '';
         cell.style.backgroundColor = '#FFF8DC';
+        cell.style.pointerEvents = 'auto';
     });
+    
+    // Hamle sayaçlarını güncelle
+    updateMovesLeft();
 }
 
 // Mevcut arılı mod hamlesi
@@ -426,6 +417,7 @@ function handleBeeMove(e) {
 
     if (!gameActive) return;
 
+    // Seçili bir taş varsa ve boş bir hücreye taşınıyorsa
     if (selectedCell !== null) {
         if (gameBoard[cellIndex] === '') {
             gameBoard[cellIndex] = currentPlayer;
@@ -436,7 +428,7 @@ function handleBeeMove(e) {
             clickSound.play();
 
             if (checkWin()) {
-                handleWin();
+                handleBeeWin();
                 return;
             }
 
@@ -449,28 +441,32 @@ function handleBeeMove(e) {
         return;
     }
 
+    // Yeni taş koyma durumu
     if (gameBoard[cellIndex] === '') {
-        if (clickedCell.dataset.power) {
-            const powerKey = clickedCell.dataset.power;
-            if (powerKey === 'EXPAND_BOARD') {
-                const power = POWERS[powerKey];
-                collectPower(clickedCell, currentPlayer);
-                showPowerNotification(power, currentPlayer);
-                
-                // Güç alındıktan sonra hücreyi temizle
-                delete clickedCell.dataset.power;
-                clickedCell.classList.remove('power-active');
-                clickedCell.innerHTML = '';
-                clickedCell.style.backgroundImage = 'url(\'./bal_petek2.png\')';
-            }
-        }
-
+        // Eğer maksimum taş sayısına ulaşıldıysa, sadece taş hareket ettirmeye izin ver
         if ((currentPlayer === '🐝' && beeCount >= 3) || 
             (currentPlayer === '🍯' && honeyCount >= 3)) {
             statusDisplay.textContent = `${currentPlayer} bir taşını seç ve hareket ettir!`;
             return;
         }
 
+        let powerUsed = false;
+        // Güç kutusu kontrolü
+        if (clickedCell.dataset.power) {
+            const powerKey = clickedCell.dataset.power;
+            if (powerKey === 'EXPAND_BOARD') {
+                const power = POWERS[powerKey];
+                collectPower(clickedCell, currentPlayer);
+                showPowerNotification(power, currentPlayer);
+                delete clickedCell.dataset.power;
+                clickedCell.classList.remove('power-active');
+                clickedCell.innerHTML = '';
+                clickedCell.style.backgroundImage = 'url(\'./bal_petek2.png\')';
+                powerUsed = true;
+            }
+        }
+
+        // Yeni taş koyma
         gameBoard[cellIndex] = currentPlayer;
         clickedCell.textContent = currentPlayer;
         clickSound.play();
@@ -486,14 +482,25 @@ function handleBeeMove(e) {
         checkForPowerSpawn();
 
         if (checkWin()) {
-            handleWin();
+            handleBeeWin();
             return;
         }
 
-        currentPlayer = currentPlayer === '🐝' ? '🍯' : '🐝';
+        // Eğer her iki taraf da maksimum taş sayısına ulaştıysa, sırayı arıya ver
+        if (beeCount >= 3 && honeyCount >= 3) {
+            currentPlayer = '🐝';
+        } else {
+            // Eğer güç kullanılmadıysa sırayı değiştir
+            if (!powerUsed) {
+                currentPlayer = currentPlayer === '🐝' ? '🍯' : '🐝';
+            }
+        }
+        
         statusDisplay.textContent = `Sıra: ${currentPlayer}`;
     }
+    // Kendi taşını seçme durumu
     else if (gameBoard[cellIndex] === currentPlayer) {
+        // Sadece maksimum taş sayısına ulaşıldığında taş seçimine izin ver
         if ((currentPlayer === '🐝' && beeCount >= 3) || 
             (currentPlayer === '🍯' && honeyCount >= 3)) {
             selectedCell = cellIndex;
@@ -582,18 +589,58 @@ document.addEventListener('DOMContentLoaded', function() {
         honeyVictorySound
     ];
 
-    // Varsayılan ses seviyesini ayarla (%25)
-    volumeSlider.value = 75; // Yukarıdan aşağı olduğu için 75 yapıyoruz (ters çalışıyor)
-    previousVolume = 75;
+    // Başlangıçta sesi kapalı olarak ayarla
+    volumeSlider.value = 0; // Slider en aşağıda
+    previousVolume = 25; // Önceki ses seviyesini sakla
 
-    // Tüm ses elementlerinin başlangıç seviyesini ayarla
+    // Tüm ses elementlerinin başlangıç seviyesini 0 yap
     allSoundElements.forEach(sound => {
-        sound.volume = 0.25; // 25%
+        sound.volume = 0;
     });
 
     // Ses simgesini ayarla
-    muteButton.textContent = '🔊';
-    muteButton.classList.remove('muted');
+    muteButton.textContent = '🔈';
+    muteButton.classList.add('muted');
+});
+
+// Volume slider'ı hareket ettirildiğinde
+volumeSlider.addEventListener('input', (e) => {
+    e.stopPropagation();
+    clearTimeout(sliderTimeout);
+    const volume = (100 - e.target.value) / 100; // Slider ters çevrildiği için değeri de ters çevir
+    
+    // Ses seviyesini ayarla
+    const allSoundElements = [
+        backgroundMusic,
+        clickSound,
+        beeVictorySound,
+        honeyVictorySound
+    ];
+
+    // Eğer ses yeni açılıyorsa (0'dan farklı bir değere geçiş)
+    if (muteButton.classList.contains('muted') && volume > 0) {
+        volumeSlider.value = 75; // %25 ses için 75 değeri (ters çalıştığı için)
+        allSoundElements.forEach(sound => {
+            sound.volume = 0.25; // %25 ses seviyesi
+        });
+        muteButton.classList.remove('muted');
+        muteButton.textContent = '🔊';
+        return; // Fonksiyondan çık
+    }
+
+    // Normal ses ayarı
+    allSoundElements.forEach(sound => {
+        sound.volume = volume;
+    });
+
+    // Ses kapalıysa hoparlör ikonunu güncelle
+    if (volume === 0) {
+        muteButton.classList.add('muted');
+        muteButton.textContent = '🔈';
+    } else {
+        muteButton.classList.remove('muted');
+        muteButton.textContent = '🔊';
+    }
 });
 
 // Volume slider'da mouse basılı tutulduğunda
@@ -700,7 +747,8 @@ document.addEventListener('click', () => {
 volumeSlider.addEventListener('input', (e) => {
     e.stopPropagation();
     clearTimeout(sliderTimeout);
-    const volume = (100 - e.target.value) / 100;
+    const volume = (100 - e.target.value) / 100; // Değeri ters çevir
+    
     // Ses seviyesini ayarla
     const allSoundElements = [
         backgroundMusic,
@@ -841,17 +889,16 @@ function getRandomPower() {
     return availablePowers[randomIndex][0];
 }
 
-function collectPower(powerCell, owner) {
-    const powerKey = powerCell.dataset.power;
-    const powerTemplate = POWERS[powerKey];
-    const powerInstance = {
-        ...powerTemplate,
-        owner: owner,
-        remainingTurns: powerTemplate.duration
-    };
-    
-    activePowers.push(powerInstance);
-    updateActivePowersDisplay();
+function collectPower(cell, player) {
+    const powerKey = cell.dataset.power;
+    const power = POWERS[powerKey];
+    if (power) {
+        power.effect(player);
+        // Güç kullanıldıktan sonra hücreyi temizle
+        delete cell.dataset.power;
+        cell.classList.remove('power-active');
+        cell.textContent = '';
+    }
 }
 
 function updateActivePowersDisplay() {
@@ -944,7 +991,7 @@ function updateWinConditions(size) {
     
     // Yatay kazanma koşulları
     for (let i = 0; i < size; i++) {
-        let row = [];
+        const row = [];
         for (let j = 0; j < size; j++) {
             row.push(i * size + j);
         }
@@ -953,7 +1000,7 @@ function updateWinConditions(size) {
     
     // Dikey kazanma koşulları
     for (let i = 0; i < size; i++) {
-        let col = [];
+        const col = [];
         for (let j = 0; j < size; j++) {
             col.push(j * size + i);
         }
@@ -961,8 +1008,8 @@ function updateWinConditions(size) {
     }
     
     // Çapraz kazanma koşulları
-    let diag1 = [];
-    let diag2 = [];
+    const diag1 = [];
+    const diag2 = [];
     for (let i = 0; i < size; i++) {
         diag1.push(i * size + i);
         diag2.push(i * size + (size - 1 - i));
@@ -1162,7 +1209,8 @@ document.addEventListener('click', () => {
 volumeSlider.addEventListener('input', (e) => {
     e.stopPropagation();
     clearTimeout(sliderTimeout);
-    const volume = (100 - e.target.value) / 100;
+    const volume = (100 - e.target.value) / 100; // Slider ters çevrildiği için değeri de ters çevir
+    
     // Ses seviyesini ayarla
     const allSoundElements = [
         backgroundMusic,
@@ -1179,6 +1227,13 @@ volumeSlider.addEventListener('input', (e) => {
         muteButton.classList.add('muted');
         muteButton.textContent = '🔈';
     } else {
+        // Eğer ses yeni açılıyorsa (0'dan farklı bir değere geçiş)
+        if (muteButton.classList.contains('muted')) {
+            volumeSlider.value = 75; // Slider ters olduğu için 75 yapıyoruz (%25 ses için)
+            allSoundElements.forEach(sound => {
+                sound.volume = 0.25;
+            });
+        }
         muteButton.classList.remove('muted');
         muteButton.textContent = '🔊';
     }
@@ -1217,4 +1272,16 @@ document.addEventListener('click', () => {
     if (!slider.matches(':hover')) { // Mouse slider üzerinde değilse kapat
         closeSlider();
     }
-}); 
+});
+
+// Oyun başlangıcında board'u oluştur
+function initializeBoard() {
+    const board = document.getElementById('board');
+    board.style.gridTemplateColumns = 'repeat(3, 150px)'; // Başlangıçta 3x3
+    board.style.width = '470px'; // 3 hücre + boşluklar
+
+    // Diğer başlangıç ayarları...
+}
+
+// Sayfa yüklendiğinde çağır
+document.addEventListener('DOMContentLoaded', initializeBoard); 
